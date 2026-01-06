@@ -1,0 +1,202 @@
+.billPage {
+    animation: fadeIn 0.3s ease-out;
+    padding-bottom: var(--spacing-lg);
+}
+
+.totalCard {
+    background: var(--gradient-primary);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    margin: var(--spacing-md);
+    box-shadow: var(--shadow-lg);
+    animation: slideIn 0.4s ease-out;
+    position: relative;
+    overflow: hidden;
+}
+
+.totalCard::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg,
+            transparent,
+            rgba(255, 255, 255, 0.2),
+            transparent);
+    transition: left 0.5s;
+}
+
+.totalCard:hover::before {
+    left: 100%;
+}
+
+.totalCardContent {
+    position: relative;
+    z-index: 1;
+}
+
+.totalCardTitle {
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    opacity: 0.9;
+    margin: 0 0 var(--spacing-xs) 0;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.totalCardAmount {
+    color: white;
+    font-size: 36px;
+    font-weight: 700;
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: transform var(--transition-base);
+}
+
+.totalCardAmount:hover {
+    transform: scale(1.05);
+}
+
+.totalCardSubtitle {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 16px;
+    font-weight: 500;
+    margin: var(--spacing-sm) 0 0 0;
+}
+
+.totalCardPerPerson {
+    color: white;
+    font-size: 20px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.section {
+    animation: fadeIn 0.5s ease-out;
+    animation-fill-mode: both;
+}
+
+.section:nth-child(1) {
+    animation-delay: 0.1s;
+}
+
+.section:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.section:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+.section:nth-child(4) {
+    animation-delay: 0.4s;
+}
+
+.sectionHeader {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-weight: 600;
+}
+
+.inputWrapper {
+    position: relative;
+}
+
+.inputIcon {
+    position: absolute;
+    left: var(--spacing-md);
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 18px;
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.settleButton {
+    background: var(--gradient-secondary) !important;
+    border: none !important;
+    font-weight: 600 !important;
+    font-size: 16px !important;
+    position: relative;
+    overflow: hidden;
+    transition: all var(--transition-base) !important;
+}
+
+.settleButton::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.settleButton:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
+.settleButton:active {
+    transform: scale(0.98);
+}
+
+.settleButton:disabled {
+    background: var(--tg-theme-button-color, #ccc) !important;
+    opacity: 0.5;
+}
+
+.costHighlight {
+    color: var(--primary-green);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    transition: color var(--transition-base);
+}
+
+.costHighlight:hover {
+    color: var(--primary-green-dark);
+}
+
+.playerCount {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    background: var(--gradient-subtle);
+    padding: 4px 12px;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    color: var(--primary-green);
+}
+
+.footer {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-size: 13px;
+    opacity: 0.8;
+}
+
+.emptyState {
+    text-align: center;
+    padding: var(--spacing-xl);
+    opacity: 0.6;
+}
+
+.emptyStateIcon {
+    font-size: 48px;
+    margin-bottom: var(--spacing-md);
+}
+
+.emptyStateText {
+    font-size: 14px;
+    color: var(--tg-theme-hint-color);
+}
