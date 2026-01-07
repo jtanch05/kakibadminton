@@ -17,21 +17,41 @@ export const BillPage = () => {
     const perPerson = playerCount > 0 ? totalCost / playerCount : 0;
 
     const handleSettle = useCallback(() => {
-        const data = JSON.stringify({
-            type: 'settle',
+        // @ts-ignore
+        const WebApp = window.Telegram?.WebApp;
+
+        if (!WebApp) {
+            console.error('Telegram WebApp not available');
+            return;
+        }
+
+        // Prepare bill data
+        const billData = {
             sessionId: sessionId,
             court: parseFloat(courtFee) || 0,
             shuttles: shuttleCost,
             players: playerCount,
             total: totalCost,
             perPerson: perPerson
-        });
+        };
 
-        // @ts-ignore
-        if (window.Telegram?.WebApp) {
-            // @ts-ignore
-            window.Telegram.WebApp.sendData(data);
+        // Try sendData first (works for inline keyboard launched Mini Apps)
+        try {
+            WebApp.sendData(JSON.stringify({ type: 'settle', ...billData }));
+            WebApp.close();
+            return;
+        } catch (e) {
+            console.log('sendData not available, using alternative method');
         }
+
+        // For t.me/bot/app links, store data and open bot to trigger settle
+        // Encode bill data as base64 to pass via start parameter
+        const encodedData = btoa(JSON.stringify(billData));
+        const botUsername = 'Kaki_Badminton_Bot';
+
+        // Open deep link to trigger settle command
+        WebApp.openTelegramLink(`https://t.me/${botUsername}?start=settle_${encodedData}`);
+        WebApp.close();
     }, [sessionId, courtFee, shuttleCost, playerCount, totalCost, perPerson]);
 
     // Expand web app and read session data

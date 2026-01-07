@@ -171,6 +171,60 @@ bot.command('start', async (ctx) => {
         return;
     }
 
+    // Check if this is a settle command from Mini App
+    if (args && args.startsWith('settle_')) {
+        try {
+            const encodedData = args.replace('settle_', '');
+            const billData = JSON.parse(atob(encodedData));
+
+            const session = getSession(billData.sessionId);
+            if (!session) {
+                ctx.reply('❌ Session not found.');
+                return;
+            }
+
+            // Get participants
+            const participants = getParticipants(billData.sessionId);
+
+            // Create payments for all participants (host auto-marked as paid)
+            createPaymentRecords(billData.sessionId, billData.perPerson);
+
+            // Format bill message
+            const hostUser = getUser(session.host_id);
+            const hostName = hostUser?.first_name || 'Host';
+            const playersList = participants.map(p => `• ${p.first_name}`).join('\n');
+
+            const paymentStatus = formatPaymentStatus(billData.sessionId);
+
+            const billMessage = `🏸 Badminton Bill 🏸\n\n` +
+                `💰 Total: RM${billData.total.toFixed(2)}\n` +
+                `👤 Per Person: RM${billData.perPerson.toFixed(2)}\n\n` +
+                `Players (${participants.length}):\n${playersList}\n\n` +
+                `Pay to Host: ${hostName}\n` +
+                `(Court: RM${billData.court.toFixed(2)}, Shuttles: RM${billData.shuttles.toFixed(2)})\n\n` +
+                paymentStatus;
+
+            // Post bill to group
+            await ctx.telegram.sendMessage(
+                session.group_id,
+                billMessage,
+                {
+                    reply_markup: {
+                        inline_keyboard: [[
+                            { text: `💰 I've Paid RM${billData.perPerson.toFixed(2)}`, callback_data: `paid_${billData.sessionId}` }
+                        ]]
+                    }
+                }
+            );
+
+            ctx.reply('✅ Bill has been posted to the group!');
+        } catch (e) {
+            console.error('Failed to process settle:', e);
+            ctx.reply('❌ Failed to process bill. Please try again.');
+        }
+        return;
+    }
+
     // Default welcome message
     ctx.reply('Welcome to KakiBadminton! 🏸\n\nI help you split bills and get paid.\n\n1. Use /setqr to save your DuitNow/TnG QR.\n2. Use /newsession to create a badminton session.\n3. Open the Mini App to calculate bills.');
 });
