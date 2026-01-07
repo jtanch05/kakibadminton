@@ -20,11 +20,6 @@ export const BillPage = () => {
         // @ts-ignore
         const WebApp = window.Telegram?.WebApp;
 
-        if (!WebApp) {
-            console.error('Telegram WebApp not available');
-            return;
-        }
-
         // Prepare bill data
         const billData = {
             sessionId: sessionId,
@@ -35,16 +30,15 @@ export const BillPage = () => {
             perPerson: perPerson
         };
 
-        // Try sendData first (works for inline keyboard launched Mini Apps)
-        try {
-            WebApp.sendData(JSON.stringify({ type: 'settle', ...billData }));
-            WebApp.close();
+        // Check if WebApp is available
+        if (!WebApp) {
+            // Running outside Telegram - show alert for debugging
+            alert('Bill Data: ' + JSON.stringify(billData, null, 2) + '\n\nNote: This would send to the group in Telegram.');
+            console.log('Bill data:', billData);
             return;
-        } catch (e) {
-            console.log('sendData not available, using alternative method');
         }
 
-        // For t.me/bot/app links, store data and open bot to trigger settle
+        // For Mini Apps opened via t.me/bot/app links, use openTelegramLink
         // Encode bill data as base64 to pass via start parameter
         const encodedData = btoa(JSON.stringify(billData));
         const botUsername = 'Kaki_Badminton_Bot';
