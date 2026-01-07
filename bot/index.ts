@@ -40,11 +40,8 @@ function formatSessionMessage(sessionId: number): string {
     const participants = getParticipants(sessionId);
     const count = participants.length;
 
-    let message = `🏸 *Badminton Session*\n\n`;
+    let message = `🏸 Badminton Session\n\n`;
 
-    if (session.title && session.title !== 'Badminton Session') {
-        message += `📝 ${session.title}\n`;
-    }
     if (session.location) {
         message += `📍 ${session.location}\n`;
     }
@@ -52,15 +49,15 @@ function formatSessionMessage(sessionId: number): string {
         message += `⏰ ${session.datetime}\n`;
     }
 
-    message += `\n*Players (${count}):*\n`;
+    message += `\nPlayers (${count}):\n`;
 
     if (count === 0) {
-        message += `_No one has joined yet_\n`;
+        message += `No one has joined yet\n`;
     } else {
         participants.forEach((p, index) => {
-            const name = p.username ? `@${p.username}` : p.first_name;
+            const displayName = p.username ? `@${p.username}` : p.first_name;
             const hostLabel = p.user_id === session.host_id ? ' (host)' : '';
-            message += `${index + 1}. ${name}${hostLabel}\n`;
+            message += `${index + 1}. ${displayName}${hostLabel}\n`;
         });
     }
 
@@ -77,13 +74,6 @@ async function updateSessionMessage(ctx: any, sessionId: number) {
         inline_keyboard: [[
             { text: '✅ I\'m In', callback_data: `join_${sessionId}` },
             { text: '❌ Can\'t Make It', callback_data: `leave_${sessionId}` }
-        ], [
-            {
-                text: '💰 Settle Bill',
-                web_app: {
-                    url: `${process.env.MINI_APP_URL || 'https://your-app.com'}?session=${sessionId}`
-                }
-            }
         ]]
     };
 
@@ -94,7 +84,6 @@ async function updateSessionMessage(ctx: any, sessionId: number) {
             undefined,
             message,
             {
-                parse_mode: 'Markdown',
                 reply_markup: keyboard
             }
         );
@@ -135,26 +124,20 @@ bot.command('newsession', async (ctx) => {
     // Add host as first participant
     addParticipant(sessionId, ctx.from.id, ctx.from.first_name, ctx.from.username);
 
-    // Create inline keyboard
+    // Create inline keyboard (without web_app button for local testing)
+    // Note: Telegram requires HTTPS URLs for web_app buttons
+    // For local testing, users can open the Mini App from the bot menu
     const keyboard = {
         inline_keyboard: [[
             { text: '✅ I\'m In', callback_data: `join_${sessionId}` },
             { text: '❌ Can\'t Make It', callback_data: `leave_${sessionId}` }
-        ], [
-            {
-                text: '💰 Settle Bill',
-                web_app: {
-                    url: `${process.env.MINI_APP_URL || 'http://localhost:5173'}?session=${sessionId}`
-                }
-            }
         ]]
     };
 
     const message = formatSessionMessage(sessionId);
 
     const sentMessage = await ctx.reply(message, {
-        reply_markup: keyboard,
-        parse_mode: 'Markdown'
+        reply_markup: keyboard
     });
 
     // Update session with message_id
@@ -175,8 +158,10 @@ bot.on('photo', (ctx) => {
 
 // Handle callback queries for RSVP
 bot.on('callback_query', async (ctx) => {
-    const data = ctx.callbackQuery.data;
+    // Type guard: check if callback query has data property
+    if (!('data' in ctx.callbackQuery)) return;
 
+    const data = ctx.callbackQuery.data;
     if (!data) return;
 
     if (data.startsWith('join_')) {
@@ -205,9 +190,9 @@ bot.on('message', (ctx) => {
                 const hostData = getUser(host.id);
                 const qrFileId = hostData?.payment_qr_file_id;
 
-                let message = `🏸 *Badminton Bill* 🏸\n\n` +
-                    `💰 *Total*: RM${bill.total.toFixed(2)}\n` +
-                    `👤 *Per Person*: RM${bill.perPerson.toFixed(2)}\n\n`;
+                let message = `🏸 Badminton Bill 🏸\n\n` +
+                    `💰 Total: RM${bill.total.toFixed(2)}\n` +
+                    `👤 Per Person: RM${bill.perPerson.toFixed(2)}\n\n`;
 
                 // If session ID is provided, include participant list
                 if (bill.sessionId) {
@@ -215,7 +200,7 @@ bot.on('message', (ctx) => {
                     const participants = getParticipants(bill.sessionId);
 
                     if (participants.length > 0) {
-                        message += `*Players (${participants.length}):*\n`;
+                        message += `Players (${participants.length}):\n`;
                         participants.forEach(p => {
                             const name = p.username ? `@${p.username}` : p.first_name;
                             message += `• ${name}\n`;
@@ -235,9 +220,9 @@ bot.on('message', (ctx) => {
                     `(Court: RM${bill.court}, Shuttles: RM${bill.shuttles.toFixed(2)})`;
 
                 if (qrFileId) {
-                    ctx.replyWithPhoto(qrFileId, { caption: message, parse_mode: 'Markdown' });
+                    ctx.replyWithPhoto(qrFileId, { caption: message });
                 } else {
-                    ctx.reply(message, { parse_mode: 'Markdown' });
+                    ctx.reply(message);
                     ctx.reply('💡 Tip: Use /setqr to attach your DuitNow QR automatically next time!');
                 }
             }
