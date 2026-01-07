@@ -1,0 +1,15 @@
+{
+    "name": "kakibadminton-bot",
+    "version": "1.0.0",
+    "description": "KakiBadminton Telegram Bot",
+    "main": "bot/index.ts",
+    "scripts": {
+        "start": "tsx bot/index.ts"
+    },
+    "dependencies": {
+        "telegraf": "^4.16.3",
+        "better-sqlite3": "^9.2.2",
+        "dotenv": "^16.3.1",
+        "tsx": "^4.7.0"
+    }
+}

@@ -10,6 +10,8 @@ export const BillPage = () => {
     const [shuttleCost, setShuttleCost] = useState<number>(0);
     const [playerCount, setPlayerCount] = useState<number>(4);
     const [sessionId, setSessionId] = useState<number | null>(null);
+    const [isHost, setIsHost] = useState<boolean>(true);
+    const [hostName, setHostName] = useState<string>('');
 
     const totalCost = (parseFloat(courtFee) || 0) + shuttleCost;
     const perPerson = playerCount > 0 ? totalCost / playerCount : 0;
@@ -40,14 +42,27 @@ export const BillPage = () => {
         // Read session ID from URL
         const params = new URLSearchParams(window.location.search);
         const session = params.get('session');
+        const hostId = params.get('hostId');
+        const hostNameParam = params.get('hostName');
+
+        // @ts-ignore
+        const initData = window.Telegram?.WebApp?.initDataUnsafe;
+        const currentUserId = initData?.user?.id;
 
         if (session) {
             const sid = parseInt(session);
             setSessionId(sid);
 
+            // Check if current user is the host
+            if (hostId && currentUserId) {
+                const isUserHost = parseInt(hostId) === currentUserId;
+                setIsHost(isUserHost);
+                if (hostNameParam) {
+                    setHostName(decodeURIComponent(hostNameParam));
+                }
+            }
+
             // Try to get session data from initData
-            // @ts-ignore
-            const initData = window.Telegram?.WebApp?.initDataUnsafe;
             if (initData?.start_param) {
                 try {
                     const sessionData = JSON.parse(atob(initData.start_param));
@@ -167,7 +182,12 @@ export const BillPage = () => {
                         footer={
                             <span className={styles.footer}>
                                 <span>💡</span>
-                                <span>Click Settle to send the bill card to the group.</span>
+                                <span>
+                                    {isHost
+                                        ? "Click Settle to send the bill card to the group."
+                                        : `Only ${hostName || 'the host'} can settle the bill. You can view the details here.`
+                                    }
+                                </span>
                             </span>
                         }
                         className={styles.section}
@@ -179,11 +199,11 @@ export const BillPage = () => {
                                 stretched
                                 className={styles.settleButton}
                                 onClick={handleSettle}
-                                disabled={!courtFee || totalCost === 0}
+                                disabled={!isHost || !courtFee || totalCost === 0}
                                 aria-label={`Settle bill for RM${totalCost.toFixed(2)}, RM${perPerson.toFixed(2)} per person`}
-                                aria-disabled={!courtFee || totalCost === 0}
+                                aria-disabled={!isHost || !courtFee || totalCost === 0}
                             >
-                                <span aria-hidden="true">💰</span> Settle Bill
+                                <span aria-hidden="true">💰</span> {isHost ? 'Settle Bill' : 'View Only (Host Can Settle)'}
                                 <span className="sr-only"> - Total: RM{totalCost.toFixed(2)}, Per person: RM{perPerson.toFixed(2)}</span>
                             </Button>
                         </Cell>

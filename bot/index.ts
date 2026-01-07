@@ -104,10 +104,20 @@ async function updateSessionMessage(ctx: any, sessionId: number) {
 
     const message = formatSessionMessage(sessionId);
     const keyboard = {
-        inline_keyboard: [[
-            { text: '✅ I\'m In', callback_data: `join_${sessionId}` },
-            { text: '❌ Can\'t Make It', callback_data: `leave_${sessionId}` }
-        ]]
+        inline_keyboard: [
+            [
+                { text: '✅ I\'m In', callback_data: `join_${sessionId}` },
+                { text: '❌ Can\'t Make It', callback_data: `leave_${sessionId}` }
+            ],
+            [
+                {
+                    text: '💰 Calculate Bill',
+                    web_app: {
+                        url: `${process.env.MINI_APP_URL}?session=${sessionId}&hostId=${session.host_id}&hostName=${encodeURIComponent(ctx.from.first_name)}`
+                    }
+                }
+            ]
+        ]
     };
 
     try {
