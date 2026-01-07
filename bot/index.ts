@@ -103,6 +103,7 @@ async function updateSessionMessage(ctx: any, sessionId: number) {
     if (!session || !session.message_id) return;
 
     const message = formatSessionMessage(sessionId);
+    const botUsername = ctx.botInfo?.username || 'Kaki_Badminton_Bot';
     const keyboard = {
         inline_keyboard: [
             [
@@ -112,12 +113,11 @@ async function updateSessionMessage(ctx: any, sessionId: number) {
             [
                 {
                     text: '💰 Calculate Bill',
-                    url: `https://t.me/${ctx.botInfo?.username}?start=bill_${sessionId}`
+                    url: `https://t.me/${botUsername}/bill?startapp=${sessionId}_${session.host_id}`
                 }
             ]
         ]
     };
-
     try {
         await ctx.telegram.editMessageText(
             session.group_id,
@@ -203,7 +203,9 @@ bot.command('newsession', async (ctx) => {
     // Add host as first participant
     addParticipant(sessionId, ctx.from.id, ctx.from.first_name, ctx.from.username);
 
-    // Create inline keyboard with Calculate Bill button using web_app
+    // Create inline keyboard with Calculate Bill button
+    // Use t.me/bot/app format for Mini App (works in groups when configured in BotFather)
+    const botUsername = ctx.botInfo?.username || 'Kaki_Badminton_Bot';
     const keyboard = {
         inline_keyboard: [
             [
@@ -213,9 +215,7 @@ bot.command('newsession', async (ctx) => {
             [
                 {
                     text: '💰 Calculate Bill',
-                    web_app: {
-                        url: `${process.env.MINI_APP_URL}?session=${sessionId}&hostId=${ctx.from.id}&hostName=${encodeURIComponent(ctx.from.first_name)}`
-                    }
+                    url: `https://t.me/${botUsername}/bill?startapp=${sessionId}_${ctx.from.id}`
                 }
             ]
         ]

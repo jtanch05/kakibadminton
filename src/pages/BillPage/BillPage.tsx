@@ -39,15 +39,25 @@ export const BillPage = () => {
         // @ts-ignore
         window.Telegram?.WebApp?.expand();
 
-        // Read session ID from URL
-        const params = new URLSearchParams(window.location.search);
-        const session = params.get('session');
-        const hostId = params.get('hostId');
-        const hostNameParam = params.get('hostName');
-
         // @ts-ignore
         const initData = window.Telegram?.WebApp?.initDataUnsafe;
         const currentUserId = initData?.user?.id;
+
+        // First try URL parameters (for direct links)
+        const params = new URLSearchParams(window.location.search);
+        let session = params.get('session');
+        let hostId = params.get('hostId');
+        const hostNameParam = params.get('hostName');
+
+        // If not in URL, check startapp parameter (for t.me/bot/app links)
+        if (!session && initData?.start_param) {
+            // Format: sessionId_hostId
+            const parts = initData.start_param.split('_');
+            if (parts.length >= 2) {
+                session = parts[0];
+                hostId = parts[1];
+            }
+        }
 
         if (session) {
             const sid = parseInt(session);
@@ -59,18 +69,6 @@ export const BillPage = () => {
                 setIsHost(isUserHost);
                 if (hostNameParam) {
                     setHostName(decodeURIComponent(hostNameParam));
-                }
-            }
-
-            // Try to get session data from initData
-            if (initData?.start_param) {
-                try {
-                    const sessionData = JSON.parse(atob(initData.start_param));
-                    if (sessionData.playerCount) {
-                        setPlayerCount(sessionData.playerCount);
-                    }
-                } catch (e) {
-                    console.error('Failed to parse session data:', e);
                 }
             }
         }
