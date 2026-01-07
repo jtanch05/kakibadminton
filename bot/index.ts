@@ -14,7 +14,8 @@ import {
     getParticipantCount,
     createPaymentRecords,
     markPaymentPaid,
-    getPaymentStatus
+    getPaymentStatus,
+    setPaymentProof
 } from './db.js';
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -180,11 +181,84 @@ bot.command('setqr', (ctx) => {
     ctx.reply('Please reply to this message with your payment QR code image (Photo).');
 });
 
-bot.on('photo', (ctx) => {
+bot.on('photo', async (ctx) => {
+    // Check if this is a payment QR upload
     if (ctx.message.reply_to_message && 'text' in ctx.message.reply_to_message && ctx.message.reply_to_message.text.includes('payment QR code')) {
         const bestPhoto = ctx.message.photo[ctx.message.photo.length - 1];
         setPaymentQr(ctx.from.id, bestPhoto.file_id);
         ctx.reply('✅ Payment QR saved! When you generate a bill, this QR will be shown to your friends.');
+        return;
+    }
+
+    // Check if this is a payment proof upload
+    const pendingPayments = (global as any).pendingPayments || {};
+    const pendingPayment = pendingPayments[ctx.from.id];
+
+    if (pendingPayment) {
+        const { sessionId } = pendingPayment;
+        const session = getSession(sessionId);
+
+        if (!session) {
+            await ctx.reply('❌ Session not found');
+            return;
+        }
+
+        // Store payment proof
+        const bestPhoto = ctx.message.photo[ctx.message.photo.length - 1];
+        setPaymentProof(sessionId, ctx.from.id, bestPhoto.file_id);
+
+        // Mark as paid
+        markPaymentPaid(sessionId, ctx.from.id);
+
+        // Clear pending payment
+        delete pendingPayments[ctx.from.id];
+
+        // Confirm to user
+        await ctx.reply('✅ Payment proof received! Your payment has been marked as paid.');
+
+        // Update bill message in group
+        try {
+            const paymentStatus = formatPaymentStatus(sessionId);
+            const participants = getParticipants(sessionId);
+            const payments = getPaymentStatus(sessionId);
+            const userPayment = payments.find(p => p.user_id === ctx.from.id);
+            const amount = userPayment?.amount || 0;
+            const hostUser = getUser(session.host_id);
+
+            let message = `🏸 Badminton Bill 🏸\n\n` +
+                `💰 Total: RM${(amount * participants.length).toFixed(2)}\n` +
+                `👤 Per Person: RM${amount.toFixed(2)}\n\n`;
+
+            message += `Players (${participants.length}):\n`;
+            participants.forEach(p => {
+                const name = p.username ? `@${p.username}` : p.first_name;
+                message += `• ${name}\n`;
+            });
+            message += '\n';
+
+            message += `Pay to Host: @${hostUser?.username || ctx.from.first_name}\n` +
+                `(Court: RM${session.court_fee}, Shuttles: RM${(amount * participants.length - session.court_fee).toFixed(2)})`;
+
+            message += paymentStatus;
+
+            // Check if all paid
+            const allPaid = payments.every(p => p.payment_status === 'paid');
+            const keyboard = allPaid ? undefined : {
+                inline_keyboard: [[
+                    { text: `💰 I've Paid RM${amount.toFixed(2)}`, callback_data: `paid_${sessionId}` }
+                ]]
+            };
+
+            await ctx.telegram.editMessageCaption(
+                session.group_id,
+                session.bill_message_id,
+                undefined,
+                message,
+                { reply_markup: keyboard }
+            );
+        } catch (error) {
+            console.error('Failed to update bill message:', error);
+        }
     }
 });
 
@@ -221,58 +295,32 @@ bot.on('callback_query', async (ctx) => {
             return;
         }
 
-        // Mark payment as paid
-        markPaymentPaid(sessionId, ctx.from.id);
+        // Prompt user to send payment proof
+        await ctx.answerCbQuery('📸 Please send payment screenshot');
 
-        // Update the bill message with new payment status
-        try {
-            const paymentStatus = formatPaymentStatus(sessionId);
-            const participants = getParticipants(sessionId);
-            const host = session.host_id;
-            const hostUser = getUser(host);
+        // Send prompt message in private chat
+        await ctx.telegram.sendMessage(
+            ctx.from.id,
+            `📸 Payment Proof Required\n\n` +
+            `Please send a screenshot of your payment to confirm.\n\n` +
+            `Amount: RM${getPaymentStatus(sessionId).find(p => p.user_id === ctx.from.id)?.amount.toFixed(2) || '0.00'}\n` +
+            `Pay to: Host\n\n` +
+            `Reply to this message with your payment screenshot.`,
+            {
+                reply_markup: {
+                    force_reply: true,
+                    input_field_placeholder: 'Send payment screenshot...'
+                }
+            }
+        );
 
-            // Get per-person amount from payment record
-            const payments = getPaymentStatus(sessionId);
-            const userPayment = payments.find(p => p.user_id === ctx.from.id);
-            const amount = userPayment?.amount || 0;
-
-            let message = `🏸 Badminton Bill 🏸\n\n` +
-                `💰 Total: RM${(amount * participants.length).toFixed(2)}\n` +
-                `👤 Per Person: RM${amount.toFixed(2)}\n\n`;
-
-            message += `Players (${participants.length}):\n`;
-            participants.forEach(p => {
-                const name = p.username ? `@${p.username}` : p.first_name;
-                message += `• ${name}\n`;
-            });
-            message += '\n';
-
-            message += `Pay to Host: @${hostUser?.username || ctx.from.first_name}\n` +
-                `(Court: RM${session.court_fee}, Shuttles: RM${(amount * participants.length - session.court_fee).toFixed(2)})`;
-
-            message += paymentStatus;
-
-            // Check if all paid
-            const allPaid = payments.every(p => p.payment_status === 'paid');
-            const keyboard = allPaid ? undefined : {
-                inline_keyboard: [[
-                    { text: `💰 I've Paid RM${amount.toFixed(2)}`, callback_data: `paid_${sessionId}` }
-                ]]
-            };
-
-            await ctx.telegram.editMessageCaption(
-                session.group_id,
-                session.bill_message_id,
-                undefined,
-                message,
-                { reply_markup: keyboard }
-            );
-
-            await ctx.answerCbQuery('✅ Payment marked as received!');
-        } catch (error) {
-            console.error('Failed to update bill message:', error);
-            await ctx.answerCbQuery('✅ Marked as paid!');
-        }
+        // Store pending payment info temporarily (we'll use a simple in-memory store)
+        // In production, you'd want to use Redis or database
+        (global as any).pendingPayments = (global as any).pendingPayments || {};
+        (global as any).pendingPayments[ctx.from.id] = {
+            sessionId,
+            messageId: ctx.callbackQuery.message?.message_id
+        };
     }
 });
 

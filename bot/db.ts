@@ -50,6 +50,7 @@ db.exec(`
     amount REAL NOT NULL,
     status TEXT DEFAULT 'pending',
     paid_at DATETIME,
+    proof_file_id TEXT,
     reminder_sent BOOLEAN DEFAULT 0,
     reminder_sent_at DATETIME,
     notes TEXT,
@@ -215,6 +216,15 @@ export const markPaymentPaid = (sessionId: number, userId: number) => {
         WHERE session_id = ? AND user_id = ?
     `);
   stmt.run(sessionId, userId);
+};
+
+export const setPaymentProof = (sessionId: number, userId: number, fileId: string) => {
+  const stmt = db.prepare(`
+        UPDATE payments 
+        SET proof_file_id = ?
+        WHERE session_id = ? AND user_id = ?
+    `);
+  stmt.run(fileId, sessionId, userId);
 };
 
 export const getPaymentStatus = (sessionId: number) => {
