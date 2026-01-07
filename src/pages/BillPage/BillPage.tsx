@@ -93,13 +93,23 @@ export const BillPage = () => {
                         }
                         className={styles.section}
                     >
+                        <label htmlFor="court-fee" className="sr-only">
+                            Court rental fee in Malaysian Ringgit
+                        </label>
                         <Input
+                            id="court-fee"
                             header="RM"
                             placeholder="e.g. 50"
                             value={courtFee}
                             onChange={(e) => setCourtFee(e.target.value)}
                             type="number"
+                            inputMode="decimal"
+                            aria-label="Court rental fee in Malaysian Ringgit"
+                            aria-describedby="court-fee-help"
                         />
+                        <span id="court-fee-help" className="sr-only">
+                            Enter the total court rental fee for this session
+                        </span>
                     </Section>
 
                     <div className={styles.section}>
@@ -108,29 +118,45 @@ export const BillPage = () => {
 
                     <Section header={`👥 Players`} className={styles.section}>
                         <Cell>
-                            <div className={styles.counterContainer}>
-                                <div className={styles.counterLabel}>
+                            <div className={styles.counterContainer} role="group" aria-labelledby="player-count-label">
+                                <div id="player-count-label" className={styles.counterLabel}>
+                                    <span aria-hidden="true">👥</span>
                                     <span>Number of Players</span>
                                 </div>
                                 <div className={styles.counterControls}>
                                     <Button
                                         mode="outline"
                                         size="s"
+                                        className={styles.counterButton}
                                         onClick={() => setPlayerCount(Math.max(2, playerCount - 1))}
                                         disabled={playerCount === 2}
-                                        className={styles.counterButton}
+                                        aria-label="Decrease player count"
+                                        aria-controls="player-count-value"
                                     >
-                                        −
+                                        <span aria-hidden="true">−</span>
+                                        <span className="sr-only">Decrease</span>
                                     </Button>
-                                    <span className={styles.counterValue}>{playerCount}</span>
+                                    <div
+                                        id="player-count-value"
+                                        className={styles.counterValue}
+                                        role="status"
+                                        aria-live="polite"
+                                        aria-atomic="true"
+                                    >
+                                        {playerCount}
+                                        <span className="sr-only"> players</span>
+                                    </div>
                                     <Button
                                         mode="outline"
                                         size="s"
+                                        className={styles.counterButton}
                                         onClick={() => setPlayerCount(Math.min(20, playerCount + 1))}
                                         disabled={playerCount === 20}
-                                        className={styles.counterButton}
+                                        aria-label="Increase player count"
+                                        aria-controls="player-count-value"
                                     >
-                                        +
+                                        <span aria-hidden="true">+</span>
+                                        <span className="sr-only">Increase</span>
                                     </Button>
                                 </div>
                             </div>
@@ -151,11 +177,14 @@ export const BillPage = () => {
                                 mode="filled"
                                 size="l"
                                 stretched
-                                onClick={handleSettle}
-                                disabled={totalCost <= 0}
                                 className={styles.settleButton}
+                                onClick={handleSettle}
+                                disabled={!courtFee || totalCost === 0}
+                                aria-label={`Settle bill for RM${totalCost.toFixed(2)}, RM${perPerson.toFixed(2)} per person`}
+                                aria-disabled={!courtFee || totalCost === 0}
                             >
-                                🎯 Settle (RM{perPerson.toFixed(2)} / pax)
+                                <span aria-hidden="true">💰</span> Settle Bill
+                                <span className="sr-only"> - Total: RM{totalCost.toFixed(2)}, Per person: RM{perPerson.toFixed(2)}</span>
                             </Button>
                         </Cell>
                     </Section>

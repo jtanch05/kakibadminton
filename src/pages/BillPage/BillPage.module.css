@@ -6,12 +6,14 @@
 .totalCard {
     background: var(--gradient-primary);
     border-radius: var(--radius-lg);
-    padding: var(--spacing-lg);
+    padding: clamp(1rem, 4vw, 1.5rem);
     margin: var(--spacing-md);
     box-shadow: var(--shadow-lg);
     animation: slideIn 0.4s ease-out;
     position: relative;
     overflow: hidden;
+    /* GPU acceleration */
+    transform: translateZ(0);
 }
 
 .totalCard::before {
@@ -38,8 +40,8 @@
 }
 
 .totalCardTitle {
-    color: white;
-    font-size: 14px;
+    color: var(--primary-text);
+    font-size: clamp(0.875rem, 2vw, 1rem);
     font-weight: 500;
     opacity: 0.9;
     margin: 0 0 var(--spacing-xs) 0;
@@ -49,29 +51,32 @@
 }
 
 .totalCardAmount {
-    color: white;
-    font-size: 36px;
+    color: var(--primary-text);
+    font-size: clamp(2rem, 8vw, 2.25rem);
     font-weight: 700;
     margin: 0;
     font-variant-numeric: tabular-nums;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     transition: transform var(--transition-base);
+    /* GPU acceleration */
+    transform: translateZ(0);
+    will-change: transform;
 }
 
 .totalCardAmount:hover {
-    transform: scale(1.05);
+    transform: scale(1.05) translateZ(0);
 }
 
 .totalCardSubtitle {
-    color: rgba(255, 255, 255, 0.8);
-    font-size: 16px;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: clamp(0.875rem, 3vw, 1rem);
     font-weight: 500;
     margin: var(--spacing-sm) 0 0 0;
 }
 
 .totalCardPerPerson {
-    color: white;
-    font-size: 20px;
+    color: var(--primary-text);
+    font-size: clamp(1.125rem, 4vw, 1.25rem);
     font-weight: 600;
     font-variant-numeric: tabular-nums;
 }
@@ -102,6 +107,7 @@
     align-items: center;
     gap: var(--spacing-xs);
     font-weight: 600;
+    color: var(--text-primary);
 }
 
 .inputWrapper {
@@ -116,16 +122,20 @@
     font-size: 18px;
     opacity: 0.6;
     pointer-events: none;
+    color: var(--text-secondary);
 }
 
 .settleButton {
-    background: var(--gradient-secondary) !important;
+    background: var(--primary) !important;
     border: none !important;
     font-weight: 600 !important;
-    font-size: 16px !important;
+    font-size: clamp(0.875rem, 3vw, 1rem) !important;
     position: relative;
     overflow: hidden;
     transition: all var(--transition-base) !important;
+    /* GPU acceleration */
+    transform: translateZ(0);
+    will-change: transform;
 }
 
 .settleButton::before {
@@ -147,23 +157,23 @@
 }
 
 .settleButton:active {
-    transform: scale(0.98);
+    transform: scale(0.98) translateZ(0);
 }
 
 .settleButton:disabled {
-    background: var(--tg-theme-button-color, #ccc) !important;
+    background: var(--text-secondary) !important;
     opacity: 0.5;
 }
 
 .costHighlight {
-    color: var(--primary-green);
+    color: var(--primary);
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     transition: color var(--transition-base);
 }
 
 .costHighlight:hover {
-    color: var(--primary-green-dark);
+    color: var(--primary-hover);
 }
 
 .playerCount {
@@ -174,15 +184,16 @@
     padding: 4px 12px;
     border-radius: var(--radius-sm);
     font-weight: 600;
-    color: var(--primary-green);
+    color: var(--primary);
 }
 
 .footer {
     display: flex;
     align-items: center;
     gap: var(--spacing-xs);
-    font-size: 13px;
+    font-size: clamp(0.75rem, 2vw, 0.875rem);
     opacity: 0.8;
+    color: var(--text-secondary);
 }
 
 .emptyState {
@@ -192,13 +203,13 @@
 }
 
 .emptyStateIcon {
-    font-size: 48px;
+    font-size: clamp(2.5rem, 10vw, 3rem);
     margin-bottom: var(--spacing-md);
 }
 
 .emptyStateText {
-    font-size: 14px;
-    color: var(--tg-theme-hint-color);
+    font-size: clamp(0.875rem, 2vw, 1rem);
+    color: var(--text-secondary);
 }
 
 .counterContainer {
@@ -212,8 +223,8 @@
     display: flex;
     align-items: center;
     gap: var(--spacing-xs);
-    font-size: 14px;
-    color: var(--tg-theme-text-color);
+    font-size: clamp(0.875rem, 2vw, 1rem);
+    color: var(--text-primary);
     font-weight: 500;
 }
 
@@ -225,46 +236,87 @@
 }
 
 .counterButton {
-    width: 48px !important;
-    height: 48px !important;
+    /* Ensure minimum touch target */
+    width: 3rem !important;
+    height: 3rem !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
     border-radius: 50% !important;
-    font-size: 24px !important;
+    font-size: 1.5rem !important;
     font-weight: 300 !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     transition: all var(--transition-base) !important;
-    border: 2px solid var(--primary-green) !important;
-    color: var(--primary-green) !important;
+    border: 2px solid var(--primary) !important;
+    color: var(--primary) !important;
+    background: transparent !important;
+    /* GPU acceleration */
+    transform: translateZ(0);
+    will-change: transform;
 }
 
 .counterButton:hover:not(:disabled) {
-    background: var(--primary-green) !important;
-    color: white !important;
-    transform: scale(1.1);
+    background: var(--primary) !important;
+    color: var(--primary-text) !important;
+    transform: scale(1.1) translateZ(0);
     box-shadow: var(--shadow-glow);
 }
 
 .counterButton:active:not(:disabled) {
-    transform: scale(0.95);
+    transform: scale(0.95) translateZ(0);
 }
 
 .counterButton:disabled {
     opacity: 0.3;
-    border-color: var(--tg-theme-hint-color) !important;
-    color: var(--tg-theme-hint-color) !important;
+    border-color: var(--text-secondary) !important;
+    color: var(--text-secondary) !important;
 }
 
 .counterValue {
-    font-size: 32px;
+    font-size: clamp(1.75rem, 6vw, 2rem);
     font-weight: 700;
-    color: var(--primary-green);
+    color: var(--primary);
     font-variant-numeric: tabular-nums;
     min-width: 60px;
     text-align: center;
     transition: transform var(--transition-base);
+    /* GPU acceleration */
+    transform: translateZ(0);
+    will-change: transform;
 }
 
 .counterValue:hover {
-    transform: scale(1.1);
+    transform: scale(1.1) translateZ(0);
+}
+
+/* Accessibility: Ensure labels are properly associated */
+.inputGroup {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.label {
+    font-size: clamp(0.875rem, 2vw, 1rem);
+    font-weight: 500;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+
+    .billPage,
+    .totalCard,
+    .section,
+    .totalCardAmount,
+    .counterValue,
+    .counterButton,
+    .settleButton {
+        animation: none !important;
+        transition: none !important;
+    }
 }

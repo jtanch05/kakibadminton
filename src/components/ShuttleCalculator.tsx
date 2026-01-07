@@ -47,19 +47,29 @@ export const ShuttleCalculator = ({ onCostChange }: ShuttleCalculatorProps) => {
                 className={styles.shuttleSection}
             >
                 <div className={styles.inputGroup}>
+                    <label htmlFor="tube-price" className="sr-only">
+                        Price per tube of shuttlecocks in Malaysian Ringgit
+                    </label>
                     <Input
+                        id="tube-price"
                         header="Tube Price (RM)"
                         placeholder="e.g. 95"
                         value={tubePrice}
                         onChange={(e) => setTubePrice(e.target.value)}
                         type="number"
+                        inputMode="decimal"
+                        aria-label="Price per tube of shuttlecocks"
+                        aria-describedby="tube-price-help"
                     />
+                    <span id="tube-price-help" className="sr-only">
+                        Enter the price for one tube containing 12 shuttlecocks
+                    </span>
                 </div>
 
                 <Cell className={styles.counterCell}>
-                    <div className={styles.counterContainer}>
-                        <div className={styles.counterLabel}>
-                            <span className={styles.shuttleIcon}>🪶</span>
+                    <div className={styles.counterContainer} role="group" aria-labelledby="shuttles-used-label">
+                        <div id="shuttles-used-label" className={styles.counterLabel}>
+                            <span className={styles.shuttleIcon} aria-hidden="true">🪶</span>
                             <span>Shuttles Used</span>
                         </div>
                         <div className={styles.counterControls}>
@@ -69,18 +79,33 @@ export const ShuttleCalculator = ({ onCostChange }: ShuttleCalculatorProps) => {
                                 onClick={decrement}
                                 disabled={usedCount === 0}
                                 className={styles.counterButton}
+                                aria-label="Decrease shuttle count"
+                                aria-controls="shuttle-count-value"
                             >
-                                −
+                                <span aria-hidden="true">−</span>
+                                <span className="sr-only">Decrease</span>
                             </Button>
-                            <span className={styles.counterValue}>{usedCount}</span>
+                            <div
+                                id="shuttle-count-value"
+                                className={styles.counterValue}
+                                role="status"
+                                aria-live="polite"
+                                aria-atomic="true"
+                            >
+                                {usedCount}
+                                <span className="sr-only"> shuttlecocks used</span>
+                            </div>
                             <Button
                                 mode="outline"
                                 size="s"
                                 onClick={increment}
                                 disabled={usedCount === 24}
                                 className={styles.counterButton}
+                                aria-label="Increase shuttle count"
+                                aria-controls="shuttle-count-value"
                             >
-                                +
+                                <span aria-hidden="true">+</span>
+                                <span className="sr-only">Increase</span>
                             </Button>
                         </div>
                     </div>

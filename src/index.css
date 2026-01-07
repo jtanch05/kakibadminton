@@ -1,121 +1,174 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-  /* Badminton-themed color palette */
-  --primary-green: #10B981;
-  --primary-green-dark: #059669;
-  --secondary-orange: #F59E0B;
-  --secondary-orange-dark: #D97706;
-  --accent-blue: #3B82F6;
-  
-  /* Gradients */
-  --gradient-primary: linear-gradient(135deg, #10B981 0%, #3B82F6 100%);
-  --gradient-secondary: linear-gradient(135deg, #F59E0B 0%, #EF4444 100%);
-  --gradient-subtle: linear-gradient(180deg, rgba(16, 185, 129, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%);
-  
-  /* Spacing scale */
-  --spacing-xs: 8px;
-  --spacing-sm: 12px;
-  --spacing-md: 16px;
-  --spacing-lg: 24px;
-  --spacing-xl: 32px;
-  
+  /* Telegram Theme Colors - Dynamic */
+  --tg-bg: var(--tg-theme-bg-color, #ffffff);
+  --tg-text: var(--tg-theme-text-color, #000000);
+  --tg-hint: var(--tg-theme-hint-color, #999999);
+  --tg-link: var(--tg-theme-link-color, #3390ec);
+  --tg-button: var(--tg-theme-button-color, #3390ec);
+  --tg-button-text: var(--tg-theme-button-text-color, #ffffff);
+  --tg-secondary-bg: var(--tg-theme-secondary-bg-color, #f5f5f5);
+
+  /* Derived colors from theme */
+  --primary: var(--tg-button);
+  --primary-hover: color-mix(in srgb, var(--tg-button) 85%, black);
+  --primary-active: color-mix(in srgb, var(--tg-button) 70%, black);
+  --primary-text: var(--tg-button-text);
+  --background: var(--tg-bg);
+  --background-secondary: var(--tg-secondary-bg);
+  --text-primary: var(--tg-text);
+  --text-secondary: var(--tg-hint);
+  --text-link: var(--tg-link);
+
+  /* Semantic colors */
+  --success: #10B981;
+  --warning: #F59E0B;
+  --error: #EF4444;
+  --info: var(--tg-link);
+
+  /* Gradients using theme colors */
+  --gradient-primary: linear-gradient(135deg, var(--tg-button) 0%, color-mix(in srgb, var(--tg-button) 80%, blue) 100%);
+  --gradient-subtle: linear-gradient(180deg, color-mix(in srgb, var(--tg-button) 10%, transparent) 0%, transparent 100%);
+
+  /* Responsive spacing scale */
+  --spacing-xs: clamp(0.25rem, 1vw, 0.5rem);
+  --spacing-sm: clamp(0.5rem, 2vw, 0.75rem);
+  --spacing-md: clamp(0.75rem, 3vw, 1rem);
+  --spacing-lg: clamp(1rem, 4vw, 1.5rem);
+  --spacing-xl: clamp(1.5rem, 5vw, 2rem);
+
   /* Border radius */
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
-  
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  --shadow-glow: 0 0 20px rgba(16, 185, 129, 0.3);
-  
-  /* Transitions */
-  --transition-fast: 150ms ease;
-  --transition-base: 300ms ease;
-  --transition-slow: 500ms ease;
+  --radius-full: 9999px;
+
+  /* Shadows - adapt to theme */
+  --shadow-sm: 0 1px 2px 0 color-mix(in srgb, var(--tg-text) 5%, transparent);
+  --shadow-md: 0 4px 6px -1px color-mix(in srgb, var(--tg-text) 10%, transparent),
+    0 2px 4px -1px color-mix(in srgb, var(--tg-text) 6%, transparent);
+  --shadow-lg: 0 10px 15px -3px color-mix(in srgb, var(--tg-text) 10%, transparent),
+    0 4px 6px -2px color-mix(in srgb, var(--tg-text) 5%, transparent);
+  --shadow-glow: 0 0 20px color-mix(in srgb, var(--tg-button) 30%, transparent);
+
+  /* Transitions - optimized for 60fps */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Safe area insets */
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
 }
 
 * {
   box-sizing: border-box;
 }
 
+/* Responsive base font size */
+html {
+  font-size: clamp(14px, 2vw, 16px);
+  scroll-behavior: smooth;
+}
+
 body {
-  background: var(--tg-theme-secondary-bg-color, #f5f5f5);
+  background: var(--background-secondary);
+  color: var(--text-primary);
   padding: 0;
   margin: 0;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  /* Apply safe area padding */
+  padding-top: var(--safe-area-top);
+  padding-bottom: var(--safe-area-bottom);
+  padding-left: var(--safe-area-left);
+  padding-right: var(--safe-area-right);
 }
 
-/* Smooth scrolling */
-html {
-  scroll-behavior: smooth;
-}
-
-/* Enhanced input styling */
+/* Enhanced input styling with theme colors */
 input[type="number"],
 input[type="text"] {
   font-variant-numeric: tabular-nums;
   transition: all var(--transition-base);
+  color: var(--text-primary);
+  background: var(--background);
+  border-color: color-mix(in srgb, var(--text-primary) 20%, transparent);
+  /* Minimum touch target */
+  min-height: 44px;
+  padding: 12px;
 }
 
 input[type="number"]:focus,
 input[type="text"]:focus {
   transform: translateY(-1px);
   box-shadow: var(--shadow-md);
+  border-color: var(--primary);
+  outline: none;
 }
 
-/* Button enhancements */
+/* Button enhancements with theme colors */
 button {
-  transition: all var(--transition-base);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
   cursor: pointer;
+  /* Minimum touch target */
+  min-width: 44px;
+  min-height: 44px;
+  /* Enable GPU acceleration */
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 button:hover:not(:disabled) {
-  transform: translateY(-2px);
+  transform: translateY(-2px) translateZ(0);
   box-shadow: var(--shadow-lg);
 }
 
 button:active:not(:disabled) {
-  transform: translateY(0);
+  transform: translateY(0) translateZ(0);
 }
 
 button:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
-/* Animations */
+/* Optimized animations for 60fps - use transform and opacity only */
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(10px) translateZ(0);
   }
+
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) translateZ(0);
   }
 }
 
 @keyframes slideIn {
   from {
     opacity: 0;
-    transform: translateX(-20px);
+    transform: translateX(-20px) translateZ(0);
   }
+
   to {
     opacity: 1;
-    transform: translateX(0);
+    transform: translateX(0) translateZ(0);
   }
 }
 
 @keyframes pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.8;
   }
@@ -125,6 +178,7 @@ button:disabled {
   0% {
     background-position: -1000px 0;
   }
+
   100% {
     background-position: 1000px 0;
   }
@@ -139,15 +193,28 @@ button:disabled {
   animation: slideIn var(--transition-base) ease-out;
 }
 
-/* Glassmorphism effect */
-.glass {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+/* Screen reader only text - for accessibility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }
 
-/* Custom scrollbar */
+/* Glassmorphism effect with theme colors */
+.glass {
+  background: color-mix(in srgb, var(--background) 10%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid color-mix(in srgb, var(--text-primary) 20%, transparent);
+}
+
+/* Custom scrollbar with theme colors */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -158,10 +225,48 @@ button:disabled {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--primary-green);
+  background: var(--primary);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--primary-green-dark);
+  background: var(--primary-hover);
+}
+
+/* Responsive typography */
+h1 {
+  font-size: clamp(1.5rem, 5vw, 2.25rem);
+  color: var(--text-primary);
+}
+
+h2 {
+  font-size: clamp(1.25rem, 4vw, 1.875rem);
+  color: var(--text-primary);
+}
+
+h3 {
+  font-size: clamp(1.125rem, 3vw, 1.5rem);
+  color: var(--text-primary);
+}
+
+p {
+  color: var(--text-primary);
+}
+
+/* Focus visible for accessibility */
+*:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
