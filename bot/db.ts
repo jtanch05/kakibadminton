@@ -17,6 +17,7 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     group_id INTEGER NOT NULL,
     message_id INTEGER,
+    bill_message_id INTEGER,
     host_id INTEGER NOT NULL,
     title TEXT,
     location TEXT,
@@ -25,6 +26,8 @@ db.exec(`
     tube_price REAL DEFAULT 95,
     shuttles_used INTEGER DEFAULT 0,
     status TEXT DEFAULT 'open',
+    settled_at DATETIME,
+    payment_deadline DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -36,6 +39,21 @@ db.exec(`
     username TEXT,
     status TEXT DEFAULT 'in',
     joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (session_id) REFERENCES sessions(id),
+    UNIQUE(session_id, user_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS payments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    amount REAL NOT NULL,
+    status TEXT DEFAULT 'pending',
+    paid_at DATETIME,
+    reminder_sent BOOLEAN DEFAULT 0,
+    reminder_sent_at DATETIME,
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (session_id) REFERENCES sessions(id),
     UNIQUE(session_id, user_id)
   );
@@ -67,14 +85,21 @@ export const getUser = (userId: number) => {
 
 // Session management
 interface SessionData {
+  id?: number;
   group_id: number;
+  message_id?: number;
+  bill_message_id?: number;
   host_id: number;
   title?: string;
   location?: string;
   datetime?: string;
-  message_id?: number;
+  court_fee?: number;
+  tube_price?: number;
+  shuttles_used?: number;
+  status?: string;
+  settled_at?: string;
+  payment_deadline?: string;
 }
-
 export const createSession = (data: SessionData) => {
   const stmt = db.prepare(`
         INSERT INTO sessions (group_id, host_id, title, location, datetime, message_id)
@@ -96,10 +121,22 @@ export const getSession = (sessionId: number) => {
   return stmt.get(sessionId) as any;
 };
 
-export const updateSession = (sessionId: number, data: Partial<SessionData> & { status?: string; court_fee?: number; tube_price?: number; shuttles_used?: number }) => {
-  const fields = Object.keys(data).map(key => `${key} = @${key}`).join(', ');
-  const stmt = db.prepare(`UPDATE sessions SET ${fields} WHERE id = ?`);
-  stmt.run({ ...data, id: sessionId });
+export const updateSession = (sessionId: number, updates: Partial<SessionData> & {
+  status?: string;
+  court_fee?: number;
+  tube_price?: number;
+  shuttles_used?: number;
+  bill_message_id?: number;
+  settled_at?: string;
+  payment_deadline?: string;
+}) => {
+  const fields = Object.keys(updates).filter(k => k !== 'id').map(k => `${k} = ?`).join(', ');
+  const values = Object.keys(updates).filter(k => k !== 'id').map(k => (updates as any)[k]);
+
+  if (fields) {
+    const stmt = db.prepare(`UPDATE sessions SET ${fields} WHERE id = ?`);
+    stmt.run(...values, sessionId);
+  }
 };
 
 // Participant management
@@ -152,6 +189,110 @@ export const isParticipant = (sessionId: number, userId: number) => {
     `);
   const result = stmt.get(sessionId, userId) as { status: string } | undefined;
   return result?.status === 'in';
+};
+
+// Payment management
+export const createPaymentRecords = (sessionId: number, amount: number) => {
+  const participants = getParticipants(sessionId);
+  const session = getSession(sessionId);
+
+  const stmt = db.prepare(`
+        INSERT OR IGNORE INTO payments (session_id, user_id, amount, status)
+        VALUES (?, ?, ?, ?)
+    `);
+
+  for (const participant of participants) {
+    // Host is automatically marked as paid
+    const status = participant.user_id === session.host_id ? 'paid' : 'pending';
+    stmt.run(sessionId, participant.user_id, amount, status);
+  }
+};
+
+export const markPaymentPaid = (sessionId: number, userId: number) => {
+  const stmt = db.prepare(`
+        UPDATE payments 
+        SET status = 'paid', paid_at = CURRENT_TIMESTAMP
+        WHERE session_id = ? AND user_id = ?
+    `);
+  stmt.run(sessionId, userId);
+};
+
+export const getPaymentStatus = (sessionId: number) => {
+  const stmt = db.prepare(`
+        SELECT 
+            sp.user_id,
+            sp.first_name,
+            sp.username,
+            COALESCE(p.status, 'pending') as payment_status,
+            p.paid_at,
+            p.amount
+        FROM session_participants sp
+        LEFT JOIN payments p ON p.session_id = sp.session_id 
+            AND p.user_id = sp.user_id
+        WHERE sp.session_id = ? AND sp.status = 'in'
+        ORDER BY p.paid_at ASC NULLS LAST
+    `);
+  return stmt.all(sessionId) as Array<{
+    user_id: number;
+    first_name: string;
+    username?: string;
+    payment_status: string;
+    paid_at?: string;
+    amount: number;
+  }>;
+};
+
+export const getUnpaidParticipants = (sessionId: number) => {
+  const stmt = db.prepare(`
+        SELECT 
+            sp.user_id,
+            sp.first_name,
+            sp.username,
+            p.amount
+        FROM session_participants sp
+        JOIN payments p ON p.session_id = sp.session_id 
+            AND p.user_id = sp.user_id
+        WHERE sp.session_id = ? 
+            AND sp.status = 'in'
+            AND p.status = 'pending'
+    `);
+  return stmt.all(sessionId) as Array<{
+    user_id: number;
+    first_name: string;
+    username?: string;
+    amount: number;
+  }>;
+};
+
+export const getOverduePayments = () => {
+  const stmt = db.prepare(`
+        SELECT 
+            s.id as session_id,
+            s.bill_message_id,
+            s.group_id,
+            p.user_id,
+            p.amount,
+            sp.first_name,
+            sp.username
+        FROM sessions s
+        JOIN payments p ON p.session_id = s.id
+        JOIN session_participants sp ON sp.session_id = s.id 
+            AND sp.user_id = p.user_id
+        WHERE s.payment_deadline < datetime('now')
+            AND p.status = 'pending'
+            AND p.reminder_sent = 0
+            AND s.status = 'settled'
+    `);
+  return stmt.all();
+};
+
+export const markReminderSent = (sessionId: number, userId: number) => {
+  const stmt = db.prepare(`
+        UPDATE payments 
+        SET reminder_sent = 1, reminder_sent_at = CURRENT_TIMESTAMP
+        WHERE session_id = ? AND user_id = ?
+    `);
+  stmt.run(sessionId, userId);
 };
 
 export default db;

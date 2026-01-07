@@ -11,7 +11,10 @@ import {
     addParticipant,
     removeParticipant,
     getParticipants,
-    getParticipantCount
+    getParticipantCount,
+    createPaymentRecords,
+    markPaymentPaid,
+    getPaymentStatus
 } from './db.js';
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -62,6 +65,35 @@ function formatSessionMessage(sessionId: number): string {
     }
 
     return message;
+}
+
+// Helper function to format payment status
+function formatPaymentStatus(sessionId: number): string {
+    const paymentStatus = getPaymentStatus(sessionId);
+    const session = getSession(sessionId);
+
+    if (!paymentStatus || paymentStatus.length === 0) {
+        return '';
+    }
+
+    const paidCount = paymentStatus.filter(p => p.payment_status === 'paid').length;
+    const totalCount = paymentStatus.length;
+
+    let statusText = `\n💰 Payment Status (${paidCount}/${totalCount}):\n`;
+
+    paymentStatus.forEach(p => {
+        const displayName = p.username ? `@${p.username}` : p.first_name;
+        const hostLabel = p.user_id === session.host_id ? ' (host)' : '';
+        const icon = p.payment_status === 'paid' ? '✅' : '⏳';
+        const statusLabel = p.payment_status === 'paid' ? 'Paid' : 'Pending';
+        statusText += `${icon} ${displayName}${hostLabel} - ${statusLabel}\n`;
+    });
+
+    if (paidCount === totalCount) {
+        statusText += `\n🎉 All payments received!\n`;
+    }
+
+    return statusText;
 }
 
 // Helper function to update session message
@@ -156,7 +188,7 @@ bot.on('photo', (ctx) => {
     }
 });
 
-// Handle callback queries for RSVP
+// Handle callback queries for RSVP and payments
 bot.on('callback_query', async (ctx) => {
     // Type guard: check if callback query has data property
     if (!('data' in ctx.callbackQuery)) return;
@@ -164,6 +196,7 @@ bot.on('callback_query', async (ctx) => {
     const data = ctx.callbackQuery.data;
     if (!data) return;
 
+    // Handle RSVP callbacks
     if (data.startsWith('join_')) {
         const sessionId = parseInt(data.replace('join_', ''));
         addParticipant(sessionId, ctx.from.id, ctx.from.first_name, ctx.from.username);
@@ -177,9 +210,73 @@ bot.on('callback_query', async (ctx) => {
         await updateSessionMessage(ctx, sessionId);
         await ctx.answerCbQuery('❌ Removed from session');
     }
+
+    // Handle payment callbacks
+    if (data.startsWith('paid_')) {
+        const sessionId = parseInt(data.replace('paid_', ''));
+        const session = getSession(sessionId);
+
+        if (!session) {
+            await ctx.answerCbQuery('❌ Session not found');
+            return;
+        }
+
+        // Mark payment as paid
+        markPaymentPaid(sessionId, ctx.from.id);
+
+        // Update the bill message with new payment status
+        try {
+            const paymentStatus = formatPaymentStatus(sessionId);
+            const participants = getParticipants(sessionId);
+            const host = session.host_id;
+            const hostUser = getUser(host);
+
+            // Get per-person amount from payment record
+            const payments = getPaymentStatus(sessionId);
+            const userPayment = payments.find(p => p.user_id === ctx.from.id);
+            const amount = userPayment?.amount || 0;
+
+            let message = `🏸 Badminton Bill 🏸\n\n` +
+                `💰 Total: RM${(amount * participants.length).toFixed(2)}\n` +
+                `👤 Per Person: RM${amount.toFixed(2)}\n\n`;
+
+            message += `Players (${participants.length}):\n`;
+            participants.forEach(p => {
+                const name = p.username ? `@${p.username}` : p.first_name;
+                message += `• ${name}\n`;
+            });
+            message += '\n';
+
+            message += `Pay to Host: @${hostUser?.username || ctx.from.first_name}\n` +
+                `(Court: RM${session.court_fee}, Shuttles: RM${(amount * participants.length - session.court_fee).toFixed(2)})`;
+
+            message += paymentStatus;
+
+            // Check if all paid
+            const allPaid = payments.every(p => p.payment_status === 'paid');
+            const keyboard = allPaid ? undefined : {
+                inline_keyboard: [[
+                    { text: `💰 I've Paid RM${amount.toFixed(2)}`, callback_data: `paid_${sessionId}` }
+                ]]
+            };
+
+            await ctx.telegram.editMessageCaption(
+                session.group_id,
+                session.bill_message_id,
+                undefined,
+                message,
+                { reply_markup: keyboard }
+            );
+
+            await ctx.answerCbQuery('✅ Payment marked as received!');
+        } catch (error) {
+            console.error('Failed to update bill message:', error);
+            await ctx.answerCbQuery('✅ Marked as paid!');
+        }
+    }
 });
 
-bot.on('message', (ctx) => {
+bot.on('message', async (ctx) => {
     // Handle web_app_data
     if ('web_app_data' in ctx.message) {
         const data = ctx.message.web_app_data.data;
@@ -194,10 +291,11 @@ bot.on('message', (ctx) => {
                     `💰 Total: RM${bill.total.toFixed(2)}\n` +
                     `👤 Per Person: RM${bill.perPerson.toFixed(2)}\n\n`;
 
-                // If session ID is provided, include participant list
-                if (bill.sessionId) {
-                    const session = getSession(bill.sessionId);
-                    const participants = getParticipants(bill.sessionId);
+                // If session ID is provided, include participant list and create payment records
+                let sessionId = bill.sessionId;
+                if (sessionId) {
+                    const session = getSession(sessionId);
+                    const participants = getParticipants(sessionId);
 
                     if (participants.length > 0) {
                         message += `Players (${participants.length}):\n`;
@@ -208,21 +306,56 @@ bot.on('message', (ctx) => {
                         message += '\n';
                     }
 
+                    // Create payment records for all participants
+                    createPaymentRecords(sessionId, bill.perPerson);
+
+                    // Set payment deadline (24 hours from now)
+                    const deadline = new Date();
+                    deadline.setHours(deadline.getHours() + 24);
+
                     // Update session status
-                    updateSession(bill.sessionId, {
+                    updateSession(sessionId, {
                         status: 'settled',
                         court_fee: bill.court,
-                        shuttles_used: bill.shuttlesUsed || 0
+                        shuttles_used: bill.shuttlesUsed || 0,
+                        settled_at: new Date().toISOString(),
+                        payment_deadline: deadline.toISOString()
                     });
                 }
 
                 message += `Pay to Host: @${host.username || host.first_name}\n` +
                     `(Court: RM${bill.court}, Shuttles: RM${bill.shuttles.toFixed(2)})`;
 
+                // Add payment status if session exists
+                if (sessionId) {
+                    message += formatPaymentStatus(sessionId);
+                }
+
+                // Create inline keyboard with "I've Paid" button
+                const keyboard = sessionId ? {
+                    inline_keyboard: [[
+                        { text: `💰 I've Paid RM${bill.perPerson.toFixed(2)}`, callback_data: `paid_${sessionId}` }
+                    ]]
+                } : undefined;
+
                 if (qrFileId) {
-                    ctx.replyWithPhoto(qrFileId, { caption: message });
+                    const sentMessage = await ctx.replyWithPhoto(qrFileId, {
+                        caption: message,
+                        reply_markup: keyboard
+                    });
+
+                    // Store bill message ID
+                    if (sessionId) {
+                        updateSession(sessionId, { bill_message_id: sentMessage.message_id });
+                    }
                 } else {
-                    ctx.reply(message);
+                    const sentMessage = await ctx.reply(message, { reply_markup: keyboard });
+
+                    // Store bill message ID
+                    if (sessionId) {
+                        updateSession(sessionId, { bill_message_id: sentMessage.message_id });
+                    }
+
                     ctx.reply('💡 Tip: Use /setqr to attach your DuitNow QR automatically next time!');
                 }
             }
