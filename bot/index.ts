@@ -112,9 +112,7 @@ async function updateSessionMessage(ctx: any, sessionId: number) {
             [
                 {
                     text: '💰 Calculate Bill',
-                    web_app: {
-                        url: `${process.env.MINI_APP_URL}?session=${sessionId}&hostId=${session.host_id}&hostName=${encodeURIComponent(ctx.from.first_name)}`
-                    }
+                    url: `https://t.me/${ctx.botInfo?.username}?start=bill_${sessionId}`
                 }
             ]
         ]
@@ -135,7 +133,45 @@ async function updateSessionMessage(ctx: any, sessionId: number) {
     }
 }
 
-bot.command('start', (ctx) => {
+bot.command('start', async (ctx) => {
+    const args = ctx.message.text.split(' ')[1]; // Get the argument after /start
+
+    // Check if this is a bill redirect from group
+    if (args && args.startsWith('bill_')) {
+        const sessionId = parseInt(args.replace('bill_', ''));
+        const session = getSession(sessionId);
+
+        if (!session) {
+            ctx.reply('❌ Session not found. It may have been deleted.');
+            return;
+        }
+
+        // Get host info
+        const hostUser = getUser(session.host_id);
+        const hostName = hostUser?.first_name || 'Host';
+
+        // Send message with web_app button (works in private chat)
+        await ctx.reply(
+            `💰 Calculate Bill for Session #${sessionId}\n\n` +
+            `Host: ${hostName}\n` +
+            `Click the button below to open the calculator.`,
+            {
+                reply_markup: {
+                    inline_keyboard: [[
+                        {
+                            text: '🔢 Open Calculator',
+                            web_app: {
+                                url: `${process.env.MINI_APP_URL}?session=${sessionId}&hostId=${session.host_id}&hostName=${encodeURIComponent(hostName)}`
+                            }
+                        }
+                    ]]
+                }
+            }
+        );
+        return;
+    }
+
+    // Default welcome message
     ctx.reply('Welcome to KakiBadminton! 🏸\n\nI help you split bills and get paid.\n\n1. Use /setqr to save your DuitNow/TnG QR.\n2. Use /newsession to create a badminton session.\n3. Open the Mini App to calculate bills.');
 });
 
@@ -167,14 +203,22 @@ bot.command('newsession', async (ctx) => {
     // Add host as first participant
     addParticipant(sessionId, ctx.from.id, ctx.from.first_name, ctx.from.username);
 
-    // Create inline keyboard (without web_app button for local testing)
-    // Note: Telegram requires HTTPS URLs for web_app buttons
-    // For local testing, users can open the Mini App from the bot menu
+    // Create inline keyboard with Calculate Bill button using web_app
     const keyboard = {
-        inline_keyboard: [[
-            { text: '✅ I\'m In', callback_data: `join_${sessionId}` },
-            { text: '❌ Can\'t Make It', callback_data: `leave_${sessionId}` }
-        ]]
+        inline_keyboard: [
+            [
+                { text: '✅ I\'m In', callback_data: `join_${sessionId}` },
+                { text: '❌ Can\'t Make It', callback_data: `leave_${sessionId}` }
+            ],
+            [
+                {
+                    text: '💰 Calculate Bill',
+                    web_app: {
+                        url: `${process.env.MINI_APP_URL}?session=${sessionId}&hostId=${ctx.from.id}&hostName=${encodeURIComponent(ctx.from.first_name)}`
+                    }
+                }
+            ]
+        ]
     };
 
     const message = formatSessionMessage(sessionId);
