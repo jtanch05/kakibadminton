@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Section, Cell, Input, Button, List, Slider } from '@telegram-apps/telegram-ui';
+import { Section, Cell, Input, Button, List } from '@telegram-apps/telegram-ui';
 
 import { Page } from '@/components/Page.tsx';
 import { ShuttleCalculator } from '@/components/ShuttleCalculator.tsx';
@@ -106,26 +106,34 @@ export const BillPage = () => {
                         <ShuttleCalculator onCostChange={setShuttleCost} />
                     </div>
 
-                    <Section
-                        header={
-                            <span className={styles.sectionHeader}>
-                                <span>👥</span>
-                                <span>Players</span>
-                                <span className={styles.playerCount}>
-                                    {playerCount}
-                                </span>
-                            </span>
-                        }
-                        className={styles.section}
-                    >
+                    <Section header={`👥 Players`} className={styles.section}>
                         <Cell>
-                            <Slider
-                                value={playerCount}
-                                min={2}
-                                max={20}
-                                step={1}
-                                onChange={setPlayerCount}
-                            />
+                            <div className={styles.counterContainer}>
+                                <div className={styles.counterLabel}>
+                                    <span>Number of Players</span>
+                                </div>
+                                <div className={styles.counterControls}>
+                                    <Button
+                                        mode="outline"
+                                        size="s"
+                                        onClick={() => setPlayerCount(Math.max(2, playerCount - 1))}
+                                        disabled={playerCount === 2}
+                                        className={styles.counterButton}
+                                    >
+                                        −
+                                    </Button>
+                                    <span className={styles.counterValue}>{playerCount}</span>
+                                    <Button
+                                        mode="outline"
+                                        size="s"
+                                        onClick={() => setPlayerCount(Math.min(20, playerCount + 1))}
+                                        disabled={playerCount === 20}
+                                        className={styles.counterButton}
+                                    >
+                                        +
+                                    </Button>
+                                </div>
+                            </div>
                         </Cell>
                     </Section>
 
